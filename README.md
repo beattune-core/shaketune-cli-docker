@@ -33,7 +33,7 @@ TEST_RESONANCES AXIS=X
 TEST_RESONANCES AXIS=Y
 ```
 
-Files are saved to `/tmp/` as `resonances_x_YYYYMMDD_HHMMSS.csv` and `resonances_y_YYYYMMDD_HHMMSS.csv`.
+Files are saved to `/tmp/` as `resonances_x_YYYYMMDD_HHMMSS.csv` and `resonances_y_YYYYYMMDD_HHMMSS.csv`.
 
 ### Belts (CoreXY)
 
@@ -46,15 +46,12 @@ TEST_RESONANCES AXIS=-1,1
 
 Files are saved to `/tmp/` as `resonances_1_-1_YYYYMMDD_HHMMSS.csv` and `resonances_-1_1_YYYYMMDD_HHMMSS.csv`.
 
-## Usage
+## Usage with Docker Compose
 
-### Pull and run
+### Run with remote image
 
 ```bash
-docker run -d \
-  --name shaketune \
-  -p 7860:7860 \
-  ghcr.io/beattune-core/shaketune-cli-docker:latest
+docker-compose up -d
 ```
 
 Open [http://localhost:7860](http://localhost:7860) in your browser.
@@ -62,32 +59,22 @@ Open [http://localhost:7860](http://localhost:7860) in your browser.
 ### Stop
 
 ```bash
-docker stop shaketune && docker rm shaketune
+docker-compose down
 ```
 
 ### Optional environment variables
 
-| Variable | Default | Description |
-|---|---|---|
-| `SHAKETUNE_TIMEOUT` | `120` | Seconds before graph generation is aborted |
+Edit `docker-compose.yml` and modify `SHAKETUNE_TIMEOUT`:
 
-```bash
-docker run -d \
-  --name shaketune \
-  -p 7860:7860 \
-  -e SHAKETUNE_TIMEOUT=180 \
-  ghcr.io/beattune-core/shaketune-cli-docker:latest
+```yaml
+environment:
+  - SHAKETUNE_TIMEOUT=180
 ```
 
-## Building locally
+### Build and run locally
 
 ```bash
-git clone https://github.com/beattune-core/shaketune-cli-docker.git
-cd shaketune-cli-docker
-
-docker build -t shaketune-cli-docker:local .
-
-docker run -d --name shaketune -p 7860:7860 shaketune-cli-docker:local
+docker-compose up -d --build
 ```
 
 > **Note:** The first build takes several minutes because numpy is compiled from source against OpenBLAS on Alpine Linux.
