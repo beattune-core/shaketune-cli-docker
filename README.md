@@ -33,7 +33,7 @@ TEST_RESONANCES AXIS=X
 TEST_RESONANCES AXIS=Y
 ```
 
-Files are saved to `/tmp/` as `resonances_x_YYYYMMDD_HHMMSS.csv` and `resonances_y_YYYYYMMDD_HHMMSS.csv`.
+Files are saved to `/tmp/` as `resonances_x_YYYYMMDD_HHMMSS.csv` and `resonances_y_YYYYMMDD_HHMMSS.csv`.
 
 ### Belts (CoreXY)
 
