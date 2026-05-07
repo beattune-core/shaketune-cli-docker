@@ -1,0 +1,9 @@
+services:
+  shaketune:
+    image: ghcr.io/beattune-core/shaketune-cli-docker:latest
+    container_name: shaketune
+    ports:
+      - "7860:7860"
+    environment:
+      - SHAKETUNE_TIMEOUT=120
+    restart: unless-stopped
