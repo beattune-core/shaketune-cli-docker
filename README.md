@@ -20,17 +20,17 @@ Powered by:
 
 ## Generating raw measurement data
 
-Use Klipper's `TEST_RESONANCES` command to capture raw accelerometer data. The resulting `.csv` files are what you upload to this tool.
+Use Klipper's `TEST_RESONANCES` command with `OUTPUT=raw_data` to capture raw accelerometer data. The resulting `.csv` files are what you upload to this tool.
 
-> **Do not** use `SHAPER_CALIBRATE` — it produces processed `calibration_data_*.csv` files that cannot be used as input here.
+> **Important:** Always add `OUTPUT=raw_data`. Without it, Klipper writes a processed PSD file (`resonances_x_*.csv` with a `freq,psd_x,...` header) that shaketune cannot use as input. `SHAPER_CALIBRATE` also produces unusable output (`calibration_data_*.csv`).
 
 ### Input Shaper
 
 Run one command per axis. Upload one or both files together.
 
 ```
-TEST_RESONANCES AXIS=X
-TEST_RESONANCES AXIS=Y
+TEST_RESONANCES AXIS=X OUTPUT=raw_data
+TEST_RESONANCES AXIS=Y OUTPUT=raw_data
 ```
 
 Files are saved to `/tmp/` as `resonances_x_YYYYMMDD_HHMMSS.csv` and `resonances_y_YYYYMMDD_HHMMSS.csv`.
@@ -40,8 +40,8 @@ Files are saved to `/tmp/` as `resonances_x_YYYYMMDD_HHMMSS.csv` and `resonances
 Run both diagonal directions. Upload both files together.
 
 ```
-TEST_RESONANCES AXIS=1,-1
-TEST_RESONANCES AXIS=-1,1
+TEST_RESONANCES AXIS=1,-1 OUTPUT=raw_data
+TEST_RESONANCES AXIS=-1,1 OUTPUT=raw_data
 ```
 
 Files are saved to `/tmp/` as `resonances_1_-1_YYYYMMDD_HHMMSS.csv` and `resonances_-1_1_YYYYMMDD_HHMMSS.csv`.

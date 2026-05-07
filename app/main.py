@@ -19,6 +19,13 @@ GRAPH_PARAMS = {
 }
 
 
+_PSD_MSG = (
+    "{name} is a processed PSD file, not raw accelerometer data. "
+    "Run TEST_RESONANCES with OUTPUT=raw_data to get the correct file:\n"
+    "  TEST_RESONANCES AXIS=X OUTPUT=raw_data"
+)
+
+
 def _validate_csv_header(path: str) -> None:
     name = Path(path).name
     with open(path) as fh:
@@ -26,20 +33,21 @@ def _validate_csv_header(path: str) -> None:
             stripped = line.strip()
             if not stripped:
                 continue
+            # Klipper shaper_calibrate.py writes PSD header WITHOUT leading #
+            if stripped.startswith("freq,psd_x,psd_y,psd_z,psd_xyz"):
+                raise gr.Error(_PSD_MSG.format(name=name))
+            # Older Klipper / shaketune internal PSD header WITH leading #
             if stripped.startswith("#freq,psd_x,psd_y,psd_z,psd_xyz"):
-                raise gr.Error(
-                    f"{name} is a processed PSD file, not raw accelerometer data. "
-                    "Shaketune needs the raw resonance file produced by TEST_RESONANCES "
-                    "(typically named resonances_x_*.csv), not the calibration_data_*.csv output."
-                )
+                raise gr.Error(_PSD_MSG.format(name=name))
             if stripped.startswith("#time,accel_x,accel_y,accel_z"):
                 return
             if not stripped.startswith("#"):
                 break
     raise gr.Error(
-        f"{name} does not have a recognised Klipper accelerometer header. "
-        "Expected '#time,accel_x,accel_y,accel_z'. "
-        "Please upload the raw resonance CSV file from TEST_RESONANCES."
+        f"{name} does not have a recognised Klipper raw accelerometer header. "
+        "Expected '#time,accel_x,accel_y,accel_z'.\n"
+        "Run TEST_RESONANCES with OUTPUT=raw_data:\n"
+        "  TEST_RESONANCES AXIS=X OUTPUT=raw_data"
     )
 
 
