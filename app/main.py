@@ -14,8 +14,8 @@ ALLOWED_EXTENSIONS = {".csv", ".stdata"}
 TIMEOUT = int(os.environ.get("SHAKETUNE_TIMEOUT", "120"))
 
 GRAPH_PARAMS = {
-    "belts":        {"kinematics", "mode", "accel_per_hz", "sweeping_accel", "sweeping_period", "max_scale"},
-    "input_shaper": {"scv", "max_smoothing", "mode", "accel_per_hz", "sweeping_accel", "sweeping_period", "max_scale"},
+    "belts":        {"kinematics", "accel_per_hz", "max_scale"},
+    "input_shaper": {"scv", "max_smoothing", "accel_per_hz", "max_scale"},
 }
 
 
@@ -64,6 +64,12 @@ def generate_graph(
         raise gr.Error("Select a graph type.")
     if graph_type == "belts" and len(files) < 2:
         raise gr.Error("Belts comparison requires two input files (one per belt direction).")
+    is_sweeping = graph_type == "input_shaper" and mode == "SWEEPING"
+    if is_sweeping:
+        if not sweeping_accel:
+            raise gr.Error("Sweeping accel is required when mode is SWEEPING.")
+        if not sweeping_period:
+            raise gr.Error("Sweeping period is required when mode is SWEEPING.")
 
     tmpdir = WORK_DIR / str(uuid.uuid4())
     tmpdir.mkdir(parents=True, exist_ok=True)
@@ -88,7 +94,7 @@ def generate_graph(
         cmd += ["--klipper_dir", KLIPPER_DIR]
 
         def opt(flag, value):
-            if value is not None and value != "":
+            if value:  # rejects None, "", 0, 0.0 — all invalid for our params
                 cmd.extend([flag, str(value)])
 
         opt("--max_freq", max_freq)
@@ -101,14 +107,19 @@ def generate_graph(
             opt("--max_smoothing", max_smoothing)
         if "kinematics" in relevant:
             opt("--kinematics", kinematics)
-        if "mode" in relevant:
-            opt("--mode", mode)
+        # Mode: always passed; belts data is always a pulse measurement (no sweeping variant)
+        if graph_type == "input_shaper":
+            cmd += ["--mode", mode]
+        else:
+            cmd += ["--mode", "PULSE"]
+
+        # Sweeping params: only when SWEEPING mode (input_shaper only)
+        if is_sweeping:
+            opt("--sweeping_accel", sweeping_accel)
+            opt("--sweeping_period", sweeping_period)
+
         if "accel_per_hz" in relevant:
             opt("--accel_per_hz", accel_per_hz)
-        if "sweeping_accel" in relevant:
-            opt("--sweeping_accel", sweeping_accel)
-        if "sweeping_period" in relevant:
-            opt("--sweeping_period", sweeping_period)
         if "max_scale" in relevant:
             opt("--max_scale", max_scale)
 
@@ -158,8 +169,8 @@ with gr.Blocks(title="Shaketune Web UI") as demo:
             graph_type = gr.Dropdown(choices=GRAPH_TYPES, label="Graph type")
 
             with gr.Group():
-                max_freq = gr.Number(label="Max frequency (Hz)", value=None, precision=1)
-                dpi = gr.Number(label="DPI", value=None, precision=0)
+                max_freq = gr.Number(label="Max frequency (Hz)", value=150, precision=1)
+                dpi = gr.Number(label="DPI", value=300, precision=0)
 
             with gr.Group(visible=False) as grp_input_shaper:
                 gr.Markdown("**Input Shaper**")
@@ -174,12 +185,25 @@ with gr.Blocks(title="Shaketune Web UI") as demo:
                     value="",
                 )
 
+            # Mode — input_shaper only
+            with gr.Group(visible=False) as grp_mode:
+                gr.Markdown("**Mode**")
+                mode = gr.Dropdown(
+                    choices=["PULSE", "SWEEPING"],
+                    label="Mode",
+                    value="PULSE",
+                )
+
+            # Sweeping params — shown only when mode = SWEEPING
+            with gr.Group(visible=False) as grp_sweeping:
+                gr.Markdown("**Sweeping parameters**")
+                sweeping_accel = gr.Number(label="Sweeping accel (mm/s²)", value=None, precision=1)
+                sweeping_period = gr.Number(label="Sweeping period (s)", value=None, precision=2)
+
+            # Advanced — both graph types
             with gr.Group(visible=False) as grp_advanced:
                 gr.Markdown("**Advanced**")
-                mode = gr.Textbox(label="Mode (optional)", placeholder="e.g. SWEEPING", value="")
                 accel_per_hz = gr.Number(label="Accel per Hz (optional)", value=None, precision=2)
-                sweeping_accel = gr.Number(label="Sweeping accel (optional)", value=None, precision=1)
-                sweeping_period = gr.Number(label="Sweeping period (optional)", value=None, precision=2)
                 max_scale = gr.Number(label="Max scale (optional)", value=None, precision=0)
 
             generate_btn = gr.Button("Generate graph", variant="primary")
@@ -191,13 +215,25 @@ with gr.Blocks(title="Shaketune Web UI") as demo:
         return {
             grp_input_shaper: gr.update(visible=gt == "input_shaper"),
             grp_belts:        gr.update(visible=gt == "belts"),
+            grp_mode:         gr.update(visible=gt == "input_shaper"),
+            grp_sweeping:     gr.update(visible=False),
             grp_advanced:     gr.update(visible=gt in {"belts", "input_shaper"}),
+            mode:             gr.update(value="PULSE"),
         }
+
+    def update_sweeping(gt, m):
+        return gr.update(visible=gt == "input_shaper" and m == "SWEEPING")
 
     graph_type.change(
         update_groups,
         inputs=graph_type,
-        outputs=[grp_input_shaper, grp_belts, grp_advanced],
+        outputs=[grp_input_shaper, grp_belts, grp_mode, grp_sweeping, grp_advanced, mode],
+    )
+
+    mode.change(
+        update_sweeping,
+        inputs=[graph_type, mode],
+        outputs=grp_sweeping,
     )
 
     generate_btn.click(
@@ -209,7 +245,7 @@ with gr.Blocks(title="Shaketune Web UI") as demo:
             mode, accel_per_hz, sweeping_accel, sweeping_period, max_scale,
         ],
         outputs=output_image,
-        api_name="generate",
+        api_name="/generate",
     )
 
 

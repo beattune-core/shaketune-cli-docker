@@ -61,7 +61,7 @@ def gradio_predict(gradio_client_instance):
             kwargs.get("scv", None),
             kwargs.get("max_smoothing", None),
             kwargs.get("kinematics_b", ""),
-            kwargs.get("mode", ""),
+            kwargs.get("mode", "PULSE"),
             kwargs.get("accel_per_hz", None),
             kwargs.get("sweeping_accel", None),
             kwargs.get("sweeping_period", None),
